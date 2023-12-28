@@ -51,7 +51,7 @@ $ROOTFS/sbin/magisk* $ROOTFS/sbin/su* $ROOTFS/sbin/resetprop $ROOTFS/sbin/.magis
 $ROOTFS/cache/*magisk* $ROOTFS/cache/unblock $ROOTFS/data/*magisk* $ROOTFS/data/cache/*magisk* $ROOTFS/data/property/*magisk* \
 $ROOTFS/data/Magisk.apk $ROOTFS/data/busybox $ROOTFS/data/custom_ramdisk_patch.sh $ROOTFS/data/adb/*magisk* \
 $ROOTFS/data/adb/load-module $ROOTFS/data/adb/post-fs-data.d $ROOTFS/data/adb/service.d $ROOTFS/data/adb/modules* \
-$ROOTFS/data/unencrypted/magisk $ROOTFS/metadata/magisk $ROOTFS/persist/magisk $ROOTFS/mnt/vendor/persist/magisk \
-$ROOTFS/system/etc/init/magisk.rc $TMPDIR
+$ROOTFS/data/local/tmp/busybox /$ROOTFS/data/unencrypted/magisk $ROOTFS/metadata/magisk $ROOTFS/persist/magisk \
+$ROOTFS/mnt/vendor/persist/magisk $ROOTFS/system/etc/init/magisk.rc $TMPDIR
 
 ui_print "- Done"

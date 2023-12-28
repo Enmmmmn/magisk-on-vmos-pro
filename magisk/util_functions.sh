@@ -2,8 +2,8 @@
 # Magisk General Utility Functions
 ############################################
 
-MAGISK_VER='65207f96'
-MAGISK_VER_CODE=26404
+MAGISK_VER='26.4'
+MAGISK_VER_CODE=26400
 
 ###################
 # Global Variables
@@ -512,13 +512,6 @@ api_level_arch_detect() {
   fi
 }
 
-check_install(){
-  api_level_arch_detect
-
-  [ "$API" != 28 ] && [ "$API" != 25 ] && exit
-  [ "$IS64BIT" != true ] && exit
-}
-
 check_data() {
   DATA=false
   DATA_DE=false
@@ -532,6 +525,20 @@ check_data() {
   set_nvbase "/data"
   $DATA || set_nvbase "/cache/data_adb"
   $DATA_DE && set_nvbase "/data/adb"
+}
+
+check_install(){
+  api_level_arch_detect
+
+  [ "$IS64BIT" != true ] && exit
+
+  if [ "$API" = 28 ]; then
+    service call package 151 s16 com.topjohnwu.magisk i32 $1 i32 0 > /dev/null 2>&1
+  elif [ "$API" = 25 ]; then
+    service call package 145 s16 com.topjohnwu.magisk i32 $1 i32 0 > /dev/null 2>&1
+  else
+    exit
+  fi
 }
 
 run_migrations() {

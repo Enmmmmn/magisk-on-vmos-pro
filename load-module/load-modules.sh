@@ -10,7 +10,7 @@ for module in $(cat $list); do
   #检测状态
   [ ! -f "$module/update" -a ! -f "$module/skip_mount" -a ! -f "$module/disable" -a ! -f "$module/remove" ] && continue
   #重启服务
-  [ -z "$restart" ] && stop zygote && stop zygote_secondary && restart=true
+  [ -z "$restart" ] && setprop ctl.stop zygote && setprop ctl.stop zygote_secondary && restart=true
   #执行文件
   sh $ROOTFS/data/adb/load-module/backup/remove-$(basename $module).sh > /dev/null 2>&1
   #删除文件
@@ -33,7 +33,7 @@ done
     #检测状态
     [ "$(cat $list | grep "$module")" ] || [ -f "$module/skip_mount" ] || [ ! -d "$module/system/" ] && continue
     #重启服务
-    [ -z "$restart" ] && stop zygote && stop zygote_secondary && restart=true
+    [ -z "$restart" ] && setprop ctl.stop zygote && setprop ctl.stop zygote_secondary && restart=true
     #切换目录
     cd "$module/system"
     #加载文件
@@ -43,7 +43,7 @@ done
       #检查类型
       if [ -f "$module/system/$target" ]; then
         #备份文件
-        if [ -f "/system/$target" ]; then
+        if [ "$(cat "/system/$target")" ]; then
           #检查文件
           [ -f "$ROOTFS/data/adb/load-module/backup/system/$target" ] && continue
           #创建目录
@@ -71,6 +71,6 @@ done
     echo "$module" >> $list
   done
   #重启服务
-  [ "$restart" ] && start zygote && start zygote_secondary
+  [ "$restart" ] && setprop ctl.start zygote && setprop ctl.start zygote_secondary
 } &
 exit 0

@@ -62,7 +62,7 @@ done
         #检查目录
         [ -d "/system/$target" ] && continue
         #创建目录
-        mkdir -m 755 "/system/$target"
+        mkdir "/system/$target"
         #修改文件
         echo "rm -rf /system/$target" >> /data/adb/load-module/backup/remove-$(basename $module).sh
       fi

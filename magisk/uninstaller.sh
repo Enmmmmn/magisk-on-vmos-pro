@@ -33,12 +33,18 @@ print_title "Magisk $PRETTY_VER Uninstaller"
 # Uninstall
 ############
 
-if $BOOTMODE; then
-  ui_print "- Removing modules"
-  magisk --remove-modules -n
+ui_print "- Stop Magisk Daemon"
+magisk --stop
 
-  for scripts in /data/adb/load-module/backup/remove-*.sh; do sh $scripts; done
-fi
+ui_print "- Removing modules"
+for module in /data/adb/modules/*; do
+  dir=$(echo "$module" | sed "s/modules/modules_update/")
+
+  [ ! -d "$dir" ] && dir=$module
+
+  sh $dir/uninstall.sh
+  sh /data/adb/load-module/backup/remove-$(basename $module).sh
+done
 
 ui_print "- Removing Magisk files"
 rm -rf \

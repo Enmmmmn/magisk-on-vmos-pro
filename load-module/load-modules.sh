@@ -47,7 +47,7 @@ done
           #检查文件
           [ -f "/data/adb/load-module/backup/system/$target" ] && continue
           #创建目录
-          mkdir -p "/data/adb/load-module/backup/system/$(dirname "$target")" > /dev/null 2>&1
+          mkdir -p "/data/adb/load-module/backup/system/$(dirname "$target")" 2>/dev/null
           #复制文件
           cp -p "/system/$target" "/data/adb/load-module/backup/system/$target" || continue
           #修改文件

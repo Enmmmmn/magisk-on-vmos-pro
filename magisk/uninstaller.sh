@@ -1,7 +1,7 @@
-#MAGISK
-############################################
-# Magisk Uninstaller (updater-script)
-############################################
+#!/system/bin/sh
+#######################################################################################
+# Magisk On VMOS Pro Uninstaller
+#######################################################################################
 
 ##############
 # Preparation
@@ -33,26 +33,18 @@ print_title "Magisk $PRETTY_VER Uninstaller"
 # Uninstall
 ############
 
-ui_print "- Stop Magisk Daemon"
-magisk --stop
-
 ui_print "- Removing modules"
-for module in /data/adb/modules/*; do
-  dir=$(echo "$module" | sed "s/modules/modules_update/")
+magisk --remove-modules -n
 
-  [ ! -d "$dir" ] && dir=$module
-
-  sh $dir/uninstall.sh
-  sh /data/adb/load-module/backup/remove-$(basename $module).sh
-done
+for scripts in /data/adb/load-module/backup/remove-*.sh; do sh $scripts; done
 
 ui_print "- Removing Magisk files"
 rm -rf \
-/sbin/magisk* /sbin/su* /sbin/resetprop /sbin/.magisk \
-/cache/*magisk* /cache/unblock /data/*magisk* /data/cache/*magisk* /data/property/*magisk* \
-/data/Magisk.apk /data/busybox /data/custom_ramdisk_patch.sh /data/adb/*magisk* \
-/data/adb/load-module /data/adb/post-fs-data.d /data/adb/service.d /data/adb/modules* \
-/data/local/tmp/busybox //data/unencrypted/magisk /metadata/magisk /persist/magisk \
-/mnt/vendor/persist/magisk /system/etc/init/magisk.rc $TMPDIR
+/sbin/*magisk* /sbin/su* /sbin/resetprop /sbin/.magisk \
+/cache/*magisk* /cache/unblock /data/*magisk* /data/cache/*magisk* \
+/data/property/*magisk* /data/Magisk.apk /data/busybox /data/custom_ramdisk_patch.sh \
+/data/adb/*magisk* /data/adb/load-module /data/adb/post-fs-data.d /data/adb/service.d \
+/data/adb/modules* /data/local/tmp/busybox /data/unencrypted/magisk /metadata/magisk \
+/persist/magisk /mnt/vendor/persist/magisk /system/etc/init/magisk.rc $TMPDIR
 
 ui_print "- Done"

@@ -530,8 +530,6 @@ check_data() {
 check_install(){
   api_level_arch_detect
 
-  [ "$IS64BIT" != true ] && exit
-
   if [ "$API" = 28 ]; then
     service call package 151 s16 com.topjohnwu.magisk i32 $1 i32 0 > /dev/null 2>&1
   elif [ "$API" = 25 ]; then

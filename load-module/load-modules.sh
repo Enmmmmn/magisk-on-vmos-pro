@@ -1,4 +1,6 @@
 #!/system/bin/sh
+#默认权限
+umask 022
 #加载列表
 list=/data/adb/load-module/config/load-list
 #清理列表
@@ -49,7 +51,7 @@ done
           #复制文件
           cp -p "/system/$target" "/data/adb/load-module/backup/system/$target" || continue
           #修改文件
-          echo -e "cp -p /data/adb/load-module/backup/system/$target /system/$target\nrm /data/adb/load-module/backup/system/$target" >> /data/adb/load-module/backup/remove-$(basename $module).sh
+          echo -e "cp -fp /data/adb/load-module/backup/system/$target /system/$target\nrm /data/adb/load-module/backup/system/$target" >> /data/adb/load-module/backup/remove-$(basename $module).sh
         else
           #修改文件
           echo "rm -f /system/$target" >> /data/adb/load-module/backup/remove-$(basename $module).sh

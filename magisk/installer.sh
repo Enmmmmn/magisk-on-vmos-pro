@@ -67,11 +67,9 @@ if [ "$IS64BIT" = true ]; then
 else
   cp ./busybox /data/adb/magisk/busybox
 fi
-cp ./magisk32 /data/adb/magisk/magisk32 2>/dev/null
-cp ./magisk64 /data/adb/magisk/magisk64 2>/dev/null
-cp ./magiskpolicy /data/adb/magisk/magiskpolicy
-cp ./magiskinit /data/adb/magisk/magiskinit
-cp ./magiskboot /data/adb/magisk/magiskboot
+
+for file in $(ls ./magisk*); do cp ./$file /data/adb/magisk/$file; done
+
 cp ./addon.d.sh /data/adb/magisk/addon.d.sh
 cp ./util_functions.sh /data/adb/magisk/util_functions.sh
 cp ./stub.apk /data/adb/magisk/stub.apk

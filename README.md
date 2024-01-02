@@ -6,9 +6,9 @@
 
 ### 兼容
 
-Android 9.0-64位
+Android 9.0
 
-Android 7.1.2-64位
+Android 7.1.2
 
 #### 安装教程
 

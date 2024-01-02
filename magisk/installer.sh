@@ -129,7 +129,7 @@ done
     #检测状态
     [ -f "$module/disable" ] && continue
     #修改属性
-    for prop in $(cat "$module/system.prop"); do
+    for prop in $(cat "$module/system.prop" 2>/dev/null); do
       echo "$prop" | sed "s/=/ /" | xargs setprop
     done
     #检测状态

@@ -528,10 +528,10 @@ check_data() {
 }
 
 check_install(){
-  # Check Android version
+  # Get Android version
   api_level_arch_detect
 
-  # Ban/Allow Magisk app uninstall
+  # Ban/Allow uninstall Magisk app
   if [ "$API" = 28 ]; then
     service call package 151 s16 com.topjohnwu.magisk i32 $1 i32 0 > /dev/null 2>&1
   elif [ "$API" = 25 ]; then

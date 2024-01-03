@@ -748,6 +748,6 @@ install_module() {
 [ -z $BOOTMODE ] && ps -A 2>/dev/null | grep zygote | grep -qv grep && BOOTMODE=true
 [ -z $BOOTMODE ] && BOOTMODE=false
 
-ROOTFS=$(cat /init_shell.sh | xargs -n 1 | grep "init" | sed -e "s|/init||" -e "s|user/0|data|")
+ROOTFS=$(dir=$(cat /init_shell.sh | xargs -n 1 | grep "init" | sed "s|/init||"); [ -d "$dir" ] && echo "$dir" || echo "$(echo "$dir" | sed "s|user/0|data|")")
 set_nvbase "$ROOTFS/data/adb"
 TMPDIR=$NVBASE/tmp

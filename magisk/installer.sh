@@ -35,7 +35,7 @@ touch /sbin/.magisk/config 2>/dev/null
 
 cp -f ./magisk32 /sbin/magisk32 2>/dev/null
 cp -f ./magisk64 /sbin/magisk64 2>/dev/null
-cp -f ./magiskpolicy /sbin/magiskpolicy 
+cp -f ./magiskpolicy /sbin/magiskpolicy
 cp -f ./magiskinit /sbin/magiskinit
 
 set_perm /sbin/magisk* 0 0 0755
@@ -73,6 +73,8 @@ set_perm_recursive /data/adb/magisk/ 0 0 0755 0755
 #########
 # Create
 #########
+
+rm -f /sbin/su
 
 cat << 'EOF' > /sbin/su
 #!/system/bin/sh

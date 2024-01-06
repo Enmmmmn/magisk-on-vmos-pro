@@ -38,7 +38,9 @@ cp -f ./magisk64 /sbin/magisk64 2>/dev/null
 cp -f ./magiskpolicy /sbin/magiskpolicy
 cp -f ./magiskinit /sbin/magiskinit
 
-set_perm /sbin/magisk* 0 0 0755
+set_perm /sbin/magisk64 0 0 0755 2>/dev/null
+set_perm /sbin/magisk32 0 0 0755 2>/dev/null
+set_perm /sbin/magiskpolicy 0 0 0755
 set_perm /sbin/magiskinit 0 0 0750
 
 [ ! -L "/sbin/.magisk/modules" ] && ln -s /data/adb/modules /sbin/.magisk/modules
@@ -107,7 +109,42 @@ cat << 'EOF' > /data/adb/load-module/load-modules.sh
 umask 022
 #获取输入
 if [ -z "$1" ]; then
-  exit
+  exit 1
+elif [ "$1" = "--detect" ]; then
+  #检测输入
+  [ "$2" ] && module=$2 || exit 1
+  #检测文件
+  if [ -f "/data/adb/load-module/config/load-$(basename $module)-list" ]; then
+    #加载列表
+    list=$(cat /data/adb/load-module/config/load-$(basename $module)-list)
+    #删除文件
+    rm -f /data/adb/load-module/config/load-$(basename $module)-list
+  fi
+  #切换目录
+  cd "$module/system"
+  #检测文件
+  for file in $(find); do
+    #目标文件
+    target=$(echo "$file" | sed "s/..//")
+    #加载配置
+    config=$(echo "$list" | grep "/system/$target=" | sed "s/=/\n/" | grep -v "/system/$target")
+    #检查类型
+    if [ -f "$module/system/$target" ]; then
+      #备份文件
+      if [ -f "/system/$target" -a "$config" != "remove" ]; then
+        #修改文件
+        echo "/system/$target=backup" >> /data/adb/load-module/config/load-$(basename $module)-list
+      else
+        #修改文件
+        echo "/system/$target=remove" >> /data/adb/load-module/config/load-$(basename $module)-list
+      fi
+    elif [ -d "$module/system/$target" ]; then
+      #检查目录
+      [ -d "/system/$target" -a "$config" != "remove" ] && continue
+      #修改文件
+      echo "/system/$target=remove" >> /data/adb/load-module/config/load-$(basename $module)-list
+    fi
+  done
 elif [ "$1" = "--load-modules" ]; then
   #加载列表
   list=/data/adb/load-module/config/load-list
@@ -138,7 +175,7 @@ elif [ "$1" = "--load-modules" ]; then
       [ -f "$module/disable" ] && continue
       #修改属性
       for prop in $(cat "$module/system.prop" 2>/dev/null); do
-        echo "$prop" | sed "s/=/ /" | xargs setprop
+        echo "$prop" | sed "s/=/ /" | xargs setprop 2>/dev/null
       done
       #检测状态
       [ "$(cat $list | grep "$module")" ] || [ -f "$module/skip_mount" ] || [ ! -d "$module/system/" ] || [ ! -f "/data/adb/load-module/config/load-$(basename $module)-list" ] && continue
@@ -151,11 +188,11 @@ elif [ "$1" = "--load-modules" ]; then
         #目标文件
         target=$(echo "$file" | sed "s/..//")
         #加载配置
-        config=$(cat /data/adb/load-module/config/load-$(basename $module)-list | grep "/system/$target=")
+        config=$(cat /data/adb/load-module/config/load-$(basename $module)-list | grep "/system/$target=" | sed "s/=/\n/" | grep -v "/system/$target")
         #检查类型
         if [ -f "$module/system/$target" ]; then
           #备份文件
-          if [ "$config" = "/system/$target=backup" ]; then
+          if [ "$config" = "backup" ]; then
             #检查文件
             [ -f "/data/adb/load-module/backup/system/$target" ] && continue
             #创建目录
@@ -164,7 +201,7 @@ elif [ "$1" = "--load-modules" ]; then
             cp -p "/system/$target" "/data/adb/load-module/backup/system/$target" || continue
             #修改文件
             echo -e "cp -fp /data/adb/load-module/backup/system/$target /system/$target\nrm /data/adb/load-module/backup/system/$target" >> /data/adb/load-module/backup/remove-$(basename $module).sh
-          elif [ "$config" = "/system/$target=remove" ]; then
+          elif [ "$config" = "remove" ]; then
             #修改文件
             echo "rm -f /system/$target" >> /data/adb/load-module/backup/remove-$(basename $module).sh
           else
@@ -174,7 +211,7 @@ elif [ "$1" = "--load-modules" ]; then
           cp -fp "$module/system/$target" "/system/$target"
         elif [ -d "$module/system/$target" ]; then
           #检查目录
-          [ -d "/system/$target" -a "$config" != "/system/$target=remove" ] && continue
+          [ -d "/system/$target" -a "$config" != "remove" ] && continue
           #创建目录
           mkdir "/system/$target" 2>/dev/null
           #修改文件
@@ -187,43 +224,6 @@ elif [ "$1" = "--load-modules" ]; then
     #重启服务
     [ "$restart" ] && setprop ctl.start zygote; setprop ctl.start zygote_secondary
   } &
-elif [ "$1" = "--detect" ]; then
-  #检测输入
-  [ "$2" ] && module=$2 || exit 1
-  #检测文件
-  if [ -f "/data/adb/load-module/config/load-$(basename $module)-list" ]; then
-    #加载列表
-    list=$(cat /data/adb/load-module/config/load-$(basename $module)-list)
-    #删除文件
-    rm -f /data/adb/load-module/config/load-$(basename $module)-list
-  fi
-  #切换目录
-  cd "$module/system"
-  #检测文件
-  for file in $(find); do
-    #目标文件
-    target=$(echo "$file" | sed "s/..//")
-    #加载配置
-    config=$(echo "$list" | grep "/system/$target=")
-    #检查类型
-    if [ -f "$module/system/$target" ]; then
-      #备份文件
-      if [ -f "/system/$target" -a "$config" != "/system/$target=remove" ]; then
-        #修改文件
-        echo "/system/$target=backup" >> /data/adb/load-module/config/load-$(basename $module)-list
-      else
-        #修改文件
-        echo "/system/$target=remove" >> /data/adb/load-module/config/load-$(basename $module)-list
-      fi
-    elif [ -d "$module/system/$target" ]; then
-      #检查目录
-      [ -d "/system/$target" -a "$config" != "/system/$target=remove" ] && continue
-      #创建目录
-      mkdir "/system/$target"
-      #修改文件
-      echo "/system/$target=remove" >> /data/adb/load-module/config/load-$(basename $module)-list
-    fi
-  done
 fi
 exit 0
 EOF

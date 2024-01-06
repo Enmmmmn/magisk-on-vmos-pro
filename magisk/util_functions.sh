@@ -720,7 +720,13 @@ install_module() {
     cp -af $MODPATH/module.prop $NVBASE/modules/$MODID/module.prop
   fi
 
-  # Detect module mount files
+  # Copy over custom sepolicy rules
+  if [ -f $MODPATH/sepolicy.rule ]; then
+    ui_print "- Installing custom sepolicy rules"
+    copy_preinit_files
+  fi
+
+  # Detect mount files
   if [ -d $MODPATH/system ]; then
     /system/bin/sh /data/adb/load-module/load-modules.sh --detect $MODPATH
   fi

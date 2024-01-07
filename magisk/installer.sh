@@ -26,7 +26,6 @@ chmod -R 755 .
 #########
 
 ui_print "- Extracting Magisk files"
-
 mkdir -p /sbin/.magisk/block/ 2>/dev/null
 mkdir /sbin/.magisk/mirror/ 2>/dev/null
 mkdir /sbin/.magisk/worker/ 2>/dev/null
@@ -155,7 +154,13 @@ elif [ "$1" = "--load-modules" ]; then
     #检测状态
     [ ! -f "$module/update" -a ! -f "$module/skip_mount" -a ! -f "$module/disable" -a ! -f "$module/remove" ] && continue
     #重启服务
-    [ -z "$restart" ] && setprop ctl.stop zygote; setprop ctl.stop zygote_secondary; restart=true
+    if [ -z "$restart" ]; then
+      #停止服务
+      setprop ctl.stop zygote
+      setprop ctl.stop zygote_secondary
+      #启用重启
+      restart=true
+    fi
     #执行文件
     sh /data/adb/load-module/backup/remove-$(basename $module).sh > /dev/null 2>&1
     #删除文件
@@ -178,9 +183,15 @@ elif [ "$1" = "--load-modules" ]; then
         echo "$prop" | sed "s/=/ /" | xargs setprop 2>/dev/null
       done
       #检测状态
-      [ "$(cat $list | grep "$module")" ] || [ -f "$module/skip_mount" ] || [ ! -d "$module/system/" ] || [ ! -f "/data/adb/load-module/config/load-$(basename $module)-list" ] && continue
+      [ "$(cat $list | grep "$module")" -o -f "$module/skip_mount" -o ! -d "$module/system/" -o ! -f "/data/adb/load-module/config/load-$(basename $module)-list" ] && continue
       #重启服务
-      [ -z "$restart" ] && setprop ctl.stop zygote; setprop ctl.stop zygote_secondary; restart=true
+      if [ -z "$restart" ]; then
+        #停止服务
+        setprop ctl.stop zygote
+        setprop ctl.stop zygote_secondary
+        #启用重启
+        restart=true
+      fi
       #切换目录
       cd "$module/system"
       #加载文件
@@ -222,7 +233,11 @@ elif [ "$1" = "--load-modules" ]; then
       echo "$module" >> $list
     done
     #重启服务
-    [ "$restart" ] && setprop ctl.start zygote; setprop ctl.start zygote_secondary
+    if [ "$restart" ]; then
+      #启动服务
+      setprop ctl.start zygote
+      setprop ctl.start zygote_secondary
+    fi
   } &
 fi
 exit 0
@@ -258,7 +273,6 @@ EOF
 #########
 
 ui_print "- Launch Magisk Daemon"
-
 cd /
 export MAGISKTMP=/sbin
 

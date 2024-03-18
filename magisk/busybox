@@ -1,5 +1,7 @@
 #!/system/bin/sh
 if [ "$(whoami)" != root ]; then
+  # vm-su
+
   rootfs=/data/local/tmp/rootfs
 
   ln -s / "$rootfs"

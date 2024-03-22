@@ -99,28 +99,28 @@ run_installer(){
   ln -sf "$MAGISKTMP"/magiskinit "$MAGISKTMP"/magiskpolicy
   ln -sf "$MAGISKTMP"/magisk "$MAGISKTMP"/resetprop
   ln -sf "$MAGISKTMP"/magiskpolicy "$MAGISKTMP"/supolicy
+  ln -sf "$MAGISKTMP"/magisk "$MAGISKTMP"/su
 
-  rm -f "$MAGISKTMP"/su
+  if [ ! -f "$MAGISKTMP"/kauditd ]; then
+    rm -f "$MAGISKTMP"/su
 
-  if [ -f "$MAGISKTMP"/kauditd ]; then
     cat << 'EOF' > "$MAGISKTMP"/su
 #!/system/bin/sh
-/sbin/magisk "su" "$@"
+case $(id -u) in
+  0 )
+    /sbin/magisk "su" "2000" "-c" "exec "/sbin/magisk" "su" "$@"" || /sbin/magisk "su" "10000"
+    ;;
+  10000 )
+    echo "Permission denied"
+    ;;
+  * )
+    /sbin/magisk "su" "$@"
+    ;;
+esac
 EOF
-  else
-    cat << 'EOF' > "$MAGISKTMP"/su
-#!/system/bin/sh
-if [ "$(id -u)" = 0 ]; then
-  /sbin/magisk "su" "2000" "-c" "exec "/sbin/magisk" "su" "$@"" || /sbin/magisk "su" "10000"
-elif [ "$(id -u)" = 10000 ]; then
-  echo "Permission denied"
-else
-  /sbin/magisk "su" "$@"
-fi
-EOF
+
+    set_perm "$MAGISKTMP"/su 0 0 0755
   fi
-
-  set_perm "$MAGISKTMP"/su 0 0 0755
 
   for dir in magisk/chromeos load-module/backup post-fs-data.d service.d; do
     mkdir -p "$NVBASE"/"$dir"/ 2>/dev/null
@@ -333,8 +333,8 @@ restore_system() {
 
   # Remove Magisk files
   rm -rf \
-  "$ROOTFS"/sbin/*magisk* "$ROOTFS"/sbin/su* "$ROOTFS"/sbin/resetprop "$ROOTFS"/sbin/kauditd \
-  "$ROOTFS"/sbin/.magisk "$NVBASE"/load-module/backup/* "$ROOTFS"/system/etc/init/magisk.rc "$ROOTFS"/system/etc/init/kauditd.rc
+  "$ROOTFS"/sbin/*magisk* "$ROOTFS"/sbin/su* "$ROOTFS"/sbin/resetprop "$ROOTFS"/sbin/kauditd "$ROOTFS"/sbin/.magisk \
+  "$NVBASE"/load-module/backup/* "$ROOTFS"/system/etc/init/magisk.rc "$ROOTFS"/system/etc/init/kauditd.rc
 
   return 0
 }

@@ -1,5 +1,5 @@
 ##################################
-# Magisk app internal scripts
+# Magisk app 内部脚本
 ##################################
 
 run_delay() {
@@ -34,7 +34,7 @@ cp_readlink() {
 }
 
 fix_env() {
-  # Cleanup and make dirs
+  # 清理并创建目录
   rm -rf $MAGISKBIN/*
   mkdir -p $MAGISKBIN 2>/dev/null
   chmod 700 $NVBASE
@@ -44,15 +44,15 @@ fix_env() {
 }
 
 direct_install() {
-  echo "- Flashing new boot image"
+  echo "- 刷入新的 boot 映像"
   flash_image $1/new-boot.img $2
   case $? in
     1)
-      echo "! Insufficient partition size"
+      echo "! 分区大小不足"
       return 1
       ;;
     2)
-      echo "! $2 is read only"
+      echo "! $2 分区为只读"
       return 2
       ;;
   esac
@@ -66,23 +66,23 @@ direct_install() {
 }
 
 check_install(){
-  # Detect Android version
+  # 获取 Android 版本
   api_level_arch_detect
 
-  # Check Android version
+  # 检测 Android 版本
   [ "$API" != 28 ] && [ "$API" != 25 ] && exit
 }
 
 run_installer(){
-  # Default permissions
+  # 默认权限
   umask 022
 
-  # Detect Android version
+  # 检测 Android 版本/架构
   api_level_arch_detect
 
   MAGISKTMP="$ROOTFS"/sbin
 
-  ui_print "- Extracting Magisk files"
+  ui_print "- 解压 Magisk 文件"
   for dir in block mirror; do
     mkdir -p "$MAGISKTMP"/.magisk/"$dir"/ 2>/dev/null
   done
@@ -284,7 +284,7 @@ EOF
 
   set_perm "$ROOTFS"/system/etc/init/magisk.rc 0 0 0644
 
-  ui_print "- Launch Magisk Daemon"
+  ui_print "- 启动 Magisk 守护进程"
   rm -rf "$(pwd)"/
   cd /
 
@@ -294,7 +294,7 @@ EOF
 }
 
 run_uninstaller() {
-  # Default permissions
+  # 默认权限
   umask 022
 
   if echo $MAGISK_VER | grep -q '\.'; then
@@ -302,9 +302,9 @@ run_uninstaller() {
   else
     PRETTY_VER="$MAGISK_VER($MAGISK_VER_CODE)"
   fi
-  print_title "Magisk $PRETTY_VER Uninstaller"
+  print_title "Magisk $PRETTY_VER 卸载程序"
 
-  ui_print "- Removing modules"
+  ui_print "- 删除模块文件"
   for module in $(ls "$NVBASE"/modules/); do
     path="$NVBASE"/modules_update/"$module"
 
@@ -313,7 +313,7 @@ run_uninstaller() {
     sh "$path"/uninstall.sh > /dev/null 2>&1
   done
 
-  ui_print "- Removing Magisk files"
+  ui_print "- 删除 Magisk 文件"
   rm -rf \
   "$ROOTFS"/cache/*magisk* "$ROOTFS"/cache/unblock "$ROOTFS"/data/*magisk* "$ROOTFS"/data/cache/*magisk* "$ROOTFS"/data/property/*magisk* \
   "$ROOTFS"/data/Magisk.apk "$ROOTFS"/data/busybox "$ROOTFS"/data/custom_ramdisk_patch.sh "$NVBASE"/*magisk* \
@@ -322,16 +322,16 @@ run_uninstaller() {
 
   restore_system
 
-  ui_print "- Done"
+  ui_print "- 完成"
 }
 
 restore_system() {
-  # Remove modules load files
+  # 删除模块已加载的文件
   for module in $(ls "$NVBASE"/modules/); do
     sh "$NVBASE"/load-module/backup/remove-"$module".sh > /dev/null 2>&1
   done
 
-  # Remove Magisk files
+  # 删除 Magisk 文件
   rm -rf \
   "$ROOTFS"/sbin/*magisk* "$ROOTFS"/sbin/su* "$ROOTFS"/sbin/resetprop "$ROOTFS"/sbin/kauditd "$ROOTFS"/sbin/.magisk \
   "$NVBASE"/load-module/backup/* "$ROOTFS"/system/etc/init/magisk.rc "$ROOTFS"/system/etc/init/kauditd.rc
@@ -357,7 +357,7 @@ EOF
 }
 
 add_hosts_module() {
-  # Do not touch existing hosts module
+  # 不要更改已安装的 hosts 模块
   [ -d $NVBASE/modules/hosts ] && return
   cd $NVBASE/modules
   mkdir -p hosts/system/etc
@@ -381,16 +381,16 @@ adb_pm_install() {
   su 2000 -c pm install $tmp || pm install $tmp || su 1000 -c pm install $tmp
   local res=$?
   rm -f $tmp
-  # Note: change this will kill self
+  # 注意: 改变这个会被 kill
   [ $res != 0 ] && appops set "$2" REQUEST_INSTALL_PACKAGES allow
   return $res
 }
 
 check_boot_ramdisk() {
-  # Create boolean ISAB
+  # 创建 boolean ISAB
   [ -z $SLOT ] && ISAB=false || ISAB=true
 
-  # Override system mode to true if not set
+  # 将 system mode 设置为 true
   SYSTEMMODE=true
   return 1
 }
@@ -400,14 +400,13 @@ check_encryption() {
     if [ $SDK_INT -lt 24 ]; then
       CRYPTOTYPE="block"
     else
-      # First see what the system tells us
       CRYPTOTYPE=$(getprop ro.crypto.type)
       if [ -z $CRYPTOTYPE ]; then
-        # If not mounting through device mapper, we are FBE
+        # 如果不通过设备映射器安装则是 FBE
         if grep ' /data ' /proc/mounts | grep -qv 'dm-'; then
           CRYPTOTYPE="file"
         else
-          # We are either FDE or metadata encryption (which is also FBE)
+          # 要么是 FDE，或者是 metadata 加密 (也是FBE)
           grep -q ' /metadata ' /proc/mounts && CRYPTOTYPE="file" || CRYPTOTYPE="block"
         fi
       fi
@@ -418,12 +417,12 @@ check_encryption() {
 }
 
 ##########################
-# Non-root util_functions
+# 无需 root 函数
 ##########################
 
 mount_partitions() {
   [ "$(getprop ro.build.ab_update)" = "true" ] && SLOT=$(getprop ro.boot.slot_suffix)
-  # Check whether non rootfs root dir exists
+  # 检查非 rootfs 根目录是否存在
   grep ' / ' /proc/mounts | grep -qv 'rootfs' && SYSTEM_ROOT=true || SYSTEM_ROOT=false
 }
 
@@ -433,7 +432,7 @@ get_flags() {
   KEEPFORCEENCRYPT=$ISENCRYPTED
   VBMETAEXIST=true
   PATCHVBMETAFLAG=false
-  # Do NOT preset SYSTEMMODE here
+  # 不要在此处预设 SYSTEMMODE
 }
 
 run_migrations() { return; }
@@ -441,7 +440,7 @@ run_migrations() { return; }
 grep_prop() { return; }
 
 #############
-# Initialize
+# 初始化
 #############
 
 app_init() {
@@ -451,7 +450,7 @@ app_init() {
   SHA1=$(grep_prop SHA1 $MAGISKTMP/config)
   check_boot_ramdisk && RAMDISKEXIST=true || RAMDISKEXIST=false
   check_encryption
-  # Make sure SYSTEMMODE has value
+  # 确保 SYSTEMMODE 具有值
   [ -z $SYSTEMMODE ] && SYSTEMMODE=false
 }
 

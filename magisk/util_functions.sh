@@ -1,15 +1,15 @@
 ############################################
-# Magisk General Utility Functions
+# Magisk 通用实用函数
 ############################################
 
 # Magisk On VMOS Pro
-# Powered by Magisk On System
+# 由 Magisk On System 提供支持
 
 MAGISK_VER='24.1'
 MAGISK_VER_CODE=24100
 
 ###################
-# Helper Functions
+# 辅助函数
 ###################
 
 ui_print() {
@@ -42,7 +42,7 @@ grep_prop() {
 grep_get_prop() {
   local result=$(grep_prop $@)
   if [ -z "$result" ]; then
-    # Fallback to getprop
+    # 回退到 getprop
     getprop "$1"
   else
     echo $result
@@ -92,14 +92,14 @@ print_title() {
 }
 
 ######################
-# Environment Related
+# 环境相关
 ######################
 
 setup_flashable() {
   ensure_bb
   $BOOTMODE && return
   if [ -z $OUTFD ] || readlink /proc/$$/fd/$OUTFD | grep -q /tmp; then
-    # We will have to manually find out OUTFD
+    # 手动找出 OUTFD
     for FD in `ls /proc/$$/fd`; do
       if readlink /proc/$$/fd/$FD | grep -q pipe; then
         if ps | grep -v grep | grep -qE " 3 $FD |status_fd=$FD"; then
@@ -114,23 +114,23 @@ setup_flashable() {
 
 ensure_bb() {
   if set -o | grep -q standalone; then
-    # We are definitely in busybox ash
+    # 现在已经在 busybox ash 内
     set -o standalone
     return
   fi
 
-  # Find our busybox binary
+  # 寻找 busybox 文件
   local bb
   if [ -f $TMPDIR/busybox ]; then
     bb=$TMPDIR/busybox
   elif [ -f $MAGISKBIN/busybox ]; then
     bb=$MAGISKBIN/busybox
   else
-    abort "! Cannot find BusyBox"
+    abort "! 无法找到 BusyBox 文件"
   fi
   chmod 755 $bb
 
-  # Busybox could be a script, make sure /system/bin/sh exists
+  # Busybox 可以是一个脚本, 确保 /system/bin/sh 存在
   if [ ! -f /system/bin/sh ]; then
     umount -l /system 2>/dev/null
     mkdir -p /system/bin
@@ -139,13 +139,13 @@ ensure_bb() {
 
   export ASH_STANDALONE=1
 
-  # Find our current arguments
-  # Run in busybox environment to ensure consistent results
-  # /proc/<pid>/cmdline shall be <interpreter> <script> <arguments...>
+  # 找到当前的 arguments
+  # 在 busybox 环境下运行, 保证结果一致
+  # /proc/<pid>/cmdline 应为 <interpreter> <script> <arguments...>
   local cmds="$($bb sh -c "
   for arg in \$(tr '\0' '\n' < /proc/$$/cmdline); do
     if [ -z \"\$cmds\" ]; then
-      # Skip the first argument as we want to change the interpreter
+      # 跳过第一个参数, 因为我们要更改解释器
       cmds=\"sh\"
     else
       cmds=\"\$cmds '\$arg'\"
@@ -153,15 +153,15 @@ ensure_bb() {
   done
   echo \$cmds")"
 
-  # Re-exec our script
+  # 重新执行我们的脚本
   echo $cmds | $bb xargs $bb
   exit
 }
 
 recovery_actions() {
-  # Make sure random won't get blocked
+  # 确保 random 不会被阻止
   mount -o bind /dev/urandom /dev/random
-  # Unset library paths
+  # 取消已设置的库路径
   OLD_LD_LIB=$LD_LIBRARY_PATH
   OLD_LD_PRE=$LD_PRELOAD
   OLD_LD_CFG=$LD_CONFIG_FILE
@@ -172,7 +172,7 @@ recovery_actions() {
 
 recovery_cleanup() {
   local DIR
-  ui_print "- Unmounting partitions"
+  ui_print "- 卸载分区"
   (umount_apex
   if [ ! -d /postinstall/tmp ]; then
     umount -l /system
@@ -194,10 +194,10 @@ recovery_cleanup() {
 }
 
 #######################
-# Installation Related
+# 安装相关
 #######################
 
-# find_block [partname...]
+# find_block [分区名称...]
 find_block() {
   local BLOCK DEV DEVICE DEVNAME PARTNAME UEVENT
   for BLOCK in "$@"; do
@@ -207,7 +207,7 @@ find_block() {
       return 0
     fi
   done
-  # Fallback by parsing sysfs uevents
+  # 通过解析 sysfs uevent 进行回退
   for UEVENT in /sys/dev/block/*/uevent; do
     DEVNAME=`grep_prop DEVNAME $UEVENT`
     PARTNAME=`grep_prop PARTNAME $UEVENT`
@@ -218,7 +218,7 @@ find_block() {
       fi
     done
   done
-  # Look just in /dev in case we're dealing with MTD/NAND without /dev/block devices/links
+  # 仅查看 /dev, 以防没有处理 /dev/block devices/links 的 MTD/NAND
   for DEV in "$@"; do
     DEVICE=`find /dev \( -type b -o -type c -o -type l \) -maxdepth 1 -iname $DEV | head -n 1` 2>/dev/null
     if [ ! -z $DEVICE ]; then
@@ -229,7 +229,7 @@ find_block() {
   return 1
 }
 
-# setup_mntpoint <mountpoint>
+# setup_mntpoint <挂载点>
 setup_mntpoint() {
   local POINT=$1
   [ -L $POINT ] && mv -f $POINT ${POINT}_link
@@ -239,42 +239,42 @@ setup_mntpoint() {
   fi
 }
 
-# mount_name <partname(s)> <mountpoint> <flag>
+# mount_name <分区名称(s)> <挂载点> <标签>
 mount_name() {
   local PART=$1
   local POINT=$2
   local FLAG=$3
   setup_mntpoint $POINT
   is_mounted $POINT && return
-  # First try mounting with fstab
+  # 首先尝试使用 fstab 挂载
   mount $FLAG $POINT 2>/dev/null
   if ! is_mounted $POINT; then
     local BLOCK=$(find_block $PART)
     mount $FLAG $BLOCK $POINT || return
   fi
-  ui_print "- Mounting $POINT"
+  ui_print "- 挂载 $POINT"
 }
 
-# mount_ro_ensure <partname(s)> <mountpoint>
+# mount_ro_ensure <分区名称(s)> <挂载点>
 mount_ro_ensure() {
-  # We handle ro partitions only in recovery
+  # 我们仅在 recovery 中处理只读分区
   $BOOTMODE && return
   local PART=$1
   local POINT=$2
   mount_name "$PART" $POINT '-o ro'
-  is_mounted $POINT || abort "! Cannot mount $POINT"
+  is_mounted $POINT || abort "! 无法挂载 $POINT"
 }
 
 mount_partitions() {
-  # Check A/B slot
+  # 检测 A/B 槽位
   SLOT=`grep_cmdline androidboot.slot_suffix`
   if [ -z $SLOT ]; then
     SLOT=`grep_cmdline androidboot.slot`
     [ -z $SLOT ] || SLOT=_${SLOT}
   fi
-  [ -z $SLOT ] || ui_print "- Current boot slot: $SLOT"
+  [ -z $SLOT ] || ui_print "- 当前 boot 槽位: $SLOT"
 
-  # Mount ro partitions
+  # 挂载只读分区
   if is_mounted /system_root; then
     umount /system 2&>/dev/null
     umount /system_root 2&>/dev/null
@@ -293,15 +293,15 @@ mount_partitions() {
     SYSTEM_ROOT=false
     grep ' / ' /proc/mounts | grep -qv 'rootfs' || grep -q ' /system_root ' /proc/mounts && SYSTEM_ROOT=true
   fi
-  # /vendor is used only on some older devices for recovery AVBv1 signing so is not critical if fails
+  # /vendor 仅在某些较旧的设备上用于恢复 AVB v1 签名, 因此如果失败并不重要
   [ -L /system/vendor ] && mount_name vendor$SLOT /vendor '-o ro'
-  $SYSTEM_ROOT && ui_print "- Device is system-as-root"
+  $SYSTEM_ROOT && ui_print "- 设备是 system-as-root"
 
-  # Allow /system/bin commands (dalvikvm) on Android 10+ in recovery
+  # 在 recovery 中允许 Android 10+ 上的 /system/bin 命令 (dalvikvm)
   $BOOTMODE || mount_apex
 }
 
-# loop_setup <ext4_img>, sets LOOPDEV
+# loop_setup <ext4_映像>, 设置 LOOPDEV
 loop_setup() {
   unset LOOPDEV
   local LOOP
@@ -327,10 +327,10 @@ mount_apex() {
   local PATTERN='s/.*"name":[^"]*"\([^"]*\).*/\1/p'
   for APEX in /system/apex/*; do
     if [ -f $APEX ]; then
-      # handle CAPEX APKs, extract actual APEX APK first
+      # 处理 CAPEX APKs，首先提取实际的 APEX APK
       unzip -qo $APEX original_apex -d /apex
-      [ -f /apex/original_apex ] && APEX=/apex/original_apex # unzip doesn't do return codes
-      # APEX APKs, extract and loop mount
+      [ -f /apex/original_apex ] && APEX=/apex/original_apex # unzip 不执行返回代码
+      # APEX APKs, 提取和循环安装
       unzip -qo $APEX apex_payload.img -d /apex
       DEST=$(unzip -qp $APEX apex_manifest.pb | strings | head -n 1)
       [ -z $DEST ] && DEST=$(unzip -qp $APEX apex_manifest.json | sed -n $PATTERN)
@@ -339,12 +339,12 @@ mount_apex() {
       mkdir -p $DEST
       loop_setup /apex/apex_payload.img
       if [ ! -z $LOOPDEV ]; then
-        ui_print "- Mounting $DEST"
+        ui_print "- 挂载 $DEST"
         mount -t ext4 -o ro,noatime $LOOPDEV $DEST
       fi
       rm -f /apex/original_apex /apex/apex_payload.img
     elif [ -d $APEX ]; then
-      # APEX folders, bind mount directory
+      # APEX folders, 绑定挂载目录
       if [ -f $APEX/apex_manifest.json ]; then
         DEST=/apex/$(sed -n $PATTERN $APEX/apex_manifest.json)
       elif [ -f $APEX/apex_manifest.pb ]; then
@@ -353,7 +353,7 @@ mount_apex() {
         continue
       fi
       mkdir -p $DEST
-      ui_print "- Mounting $DEST"
+      ui_print "- 挂载 $DEST"
       mount -o bind $APEX $DEST
     fi
   done
@@ -381,7 +381,7 @@ umount_apex() {
   unset BOOTCLASSPATH
 }
 
-# After calling this method, the following variables will be set:
+# 调用该函数后，将设置以下变量:
 # KEEPVERITY, KEEPFORCEENCRYPT, RECOVERYMODE, PATCHVBMETAFLAG,
 # ISENCRYPTED, VBMETAEXIST
 get_flags() {
@@ -392,7 +392,7 @@ get_flags() {
   if [ -z $KEEPVERITY ]; then
     if $SYSTEM_ROOT; then
       KEEPVERITY=true
-      ui_print "- System-as-root, keep dm/avb-verity"
+      ui_print "- System-as-root, 保留 dm/avb-verity"
     else
       KEEPVERITY=false
     fi
@@ -401,10 +401,10 @@ get_flags() {
   grep ' /data ' /proc/mounts | grep -q 'dm-' && ISENCRYPTED=true
   [ "$(getprop ro.crypto.state)" = "encrypted" ] && ISENCRYPTED=true
   if [ -z $KEEPFORCEENCRYPT ]; then
-    # No data access means unable to decrypt in recovery
+    # 没有 data 访问意味着无法在 recovery 中解密
     if $ISENCRYPTED || ! $DATA; then
       KEEPFORCEENCRYPT=true
-      ui_print "- Encrypted data, keep forceencrypt"
+      ui_print "- 已加密的 data, 保留强制加密"
     else
       KEEPFORCEENCRYPT=false
     fi
@@ -415,7 +415,7 @@ get_flags() {
       PATCHVBMETAFLAG=false
     else
       PATCHVBMETAFLAG=true
-      ui_print "- Cannot find vbmeta partition, patch vbmeta in boot image"
+      ui_print "- 没有找到 vbmeta 分区, 修补 boot 映像内的 vbmeta"
     fi
   fi
   [ -z $RECOVERYMODE ] && RECOVERYMODE=false
@@ -431,7 +431,7 @@ find_boot_image() {
     BOOTIMAGE=`find_block ramdisk recovery_ramdisk kern-a android_boot kernel bootimg boot lnx boot_a`
   fi
   if [ -z $BOOTIMAGE ]; then
-    # Lets see what fstabs tells me
+    # 查看 fstab
     BOOTIMAGE=`grep -v '#' /etc/*fstab* | grep -E '/boot(img)?[^a-zA-Z]' | grep -oE '/dev/[a-zA-Z0-9_./-]*' | head -n 1`
   fi
 }
@@ -443,7 +443,7 @@ flash_image() {
   esac
   if $BOOTSIGNED; then
     CMD2="$BOOTSIGNER -sign"
-    ui_print "- Sign image with verity keys"
+    ui_print "- 签名映像"
   else
     CMD2="cat -"
   fi
@@ -459,33 +459,33 @@ flash_image() {
     flash_eraseall "$2" >&2
     eval "$CMD1" | eval "$CMD2" | nandwrite -p "$2" - >&2
   else
-    ui_print "- Not block or char device, storing image"
+    ui_print "- 不是 block 或 char 设备, 保留映像"
     eval "$CMD1" | eval "$CMD2" > "$2" 2>/dev/null
   fi
   return 0
 }
 
-# Common installation script for flash_script.sh and addon.d.sh
+# flash_script.sh 和 addon.d.sh 的通用安装函数
 install_magisk() {
   cd $MAGISKBIN
 
   if [ ! -c $BOOTIMAGE ]; then
     eval $BOOTSIGNER -verify < $BOOTIMAGE && BOOTSIGNED=true
-    $BOOTSIGNED && ui_print "- Boot image is signed with AVB 1.0"
+    $BOOTSIGNED && ui_print "- Boot 映像已签名并为 AVB 1.0"
   fi
 
-  # Source the boot patcher
+  # 修补 boot 映像
   SOURCEDMODE=true
   . ./boot_patch.sh "$BOOTIMAGE"
 
-  ui_print "- Flashing new boot image"
+  ui_print "- 刷入新的 boot 映像"
   flash_image new-boot.img "$BOOTIMAGE"
   case $? in
     1)
-      abort "! Insufficient partition size"
+      abort "! 分区大小不足"
       ;;
     2)
-      abort "! $BOOTIMAGE is read only"
+      abort "! $BOOTIMAGE 分区为只读"
       ;;
   esac
 
@@ -496,7 +496,7 @@ install_magisk() {
 }
 
 sign_chromeos() {
-  ui_print "- Signing ChromeOS boot image"
+  ui_print "- 签名 ChromeOS boot 映像"
 
   echo > empty
   ./chromeos/futility vbutil_kernel --pack new-boot.img.signed \
@@ -509,7 +509,7 @@ sign_chromeos() {
 
 remove_system_su() {
   if [ -f /system/bin/su -o -f /system/xbin/su ] && [ ! -f /su/bin/su ]; then
-    ui_print "- Removing system installed root"
+    ui_print "- 删除已安装的 system root"
     blockdev --setrw /dev/block/mapper/system$SLOT 2>/dev/null
     mount -o rw,remount /system
     # SuperSU
@@ -531,7 +531,7 @@ remove_system_su() {
     /system/.supersu /cache/.supersu /data/.supersu \
     /system/app/Superuser.apk /system/app/SuperSU /cache/Superuser.apk
   elif [ -f /cache/su.img -o -f /data/su.img -o -d /data/adb/su -o -d /data/su ]; then
-    ui_print "- Removing systemless installed root"
+    ui_print "- 删除已安装的 systemless root"
     umount -l /su 2>/dev/null
     rm -rf /cache/su.img /data/su.img /data/adb/su /data/adb/suhide /data/su /cache/.supersu /data/.supersu \
     /cache/supersu_install /data/supersu_install
@@ -565,9 +565,9 @@ check_data() {
   DATA=false
   DATA_DE=false
   if grep ' /data ' /proc/mounts | grep -vq 'tmpfs'; then
-    # Test if data is writable
+    # 测试 data 是否可写
     touch /data/.rw && rm /data/.rw && DATA=true
-    # Test if data is decrypted
+    # 测试 data 是否已被解密
     $DATA && [ -d /data/adb ] && touch /data/adb/.rw && rm /data/adb/.rw && DATA_DE=true
     $DATA_DE && [ -d /data/adb/magisk ] || mkdir /data/adb/magisk || DATA_DE=false
   fi
@@ -590,20 +590,20 @@ find_magisk_apk() {
     [ -f $APK ] || [ -z $DBAPK ] || APK=/data/app/$DBAPK*/*.apk
     [ -f $APK ] || [ -z $DBAPK ] || APK=/data/app/*/$DBAPK*/*.apk
   fi
-  [ -f $APK ] || ui_print "! Unable to detect Magisk app APK for BootSigner"
+  [ -f $APK ] || ui_print "! 无法检测 Boot 签名的 Magisk app APK"
 }
 
 run_migrations() {
   local LOCSHA1
   local TARGET
-  # Legacy app installation
+  # 旧版 Magisk app 安装
   local BACKUP=$MAGISKBIN/stock_boot*.gz
   if [ -f $BACKUP ]; then
     cp $BACKUP /data
     rm -f $BACKUP
   fi
 
-  # Legacy backup
+  # 旧版备份
   for gz in /data/stock_boot*.gz; do
     [ -f $gz ] || break
     LOCSHA1=`basename $gz | sed -e 's/stock_boot_//' -e 's/.img.gz//'`
@@ -612,7 +612,7 @@ run_migrations() {
     mv $gz /data/magisk_backup_${LOCSHA1}/boot.img.gz
   done
 
-  # Stock backups
+  # 备份
   LOCSHA1=$SHA1
   for name in boot dtb dtbo dtbs; do
     BACKUP=$MAGISKBIN/stock_${name}.img
@@ -629,10 +629,10 @@ run_migrations() {
 }
 
 copy_sepolicy_rules() {
-  # Remove all existing rule folders
+  # 删除所有的现有 sepolicy rule 文件夹
   rm -rf /data/unencrypted/magisk /cache/magisk /metadata/magisk /persist/magisk /mnt/vendor/persist/magisk
 
-  # Find current active RULESDIR
+  # 查找当前活动的 RULESDIR
   local RULESDIR
   local ACTIVEDIR=$(magisk --path)/.magisk/mirror/sepolicy.rules
   if [ -L $ACTIVEDIR ]; then
@@ -651,18 +651,18 @@ copy_sepolicy_rules() {
   elif grep ' /mnt/vendor/persist ' /proc/mounts | grep -q 'ext4' ; then
     RULESDIR=/mnt/vendor/persist/magisk
   else
-    ui_print "- Unable to find sepolicy rules dir"
+    ui_print "- 无法找到 sepolicy rules 目录"
     return 1
   fi
 
   if [ -d ${RULESDIR%/magisk} ]; then
-    ui_print "- Sepolicy rules dir is ${RULESDIR%/magisk}"
+    ui_print "- Sepolicy rules 目录为 ${RULESDIR%/magisk}"
   else
-    ui_print "- Sepolicy rules dir ${RULESDIR%/magisk} not found"
+    ui_print "- Sepolicy rules 目录 ${RULESDIR%/magisk} 不存在"
     return 1
   fi
 
-  # Copy all enabled sepolicy.rule
+  # 复制所有已启用模块的 sepolicy.rule
   for r in $NVBASE/modules*/*/sepolicy.rule; do
     [ -f "$r" ] || continue
     local MODDIR=${r%/*}
@@ -675,7 +675,7 @@ copy_sepolicy_rules() {
 }
 
 #################
-# Module Related
+# 模块相关
 #################
 
 set_perm() {
@@ -707,13 +707,13 @@ request_zip_size_check() {
 
 boot_actions() { return; }
 
-# Require ZIPFILE to be set
+# 要求已设置 ZIPFILE 变量
 is_legacy_script() {
   unzip -l "$ZIPFILE" install.sh | grep -q install.sh
   return $?
 }
 
-# Require OUTFD, ZIPFILE to be set
+# 要求已设置 OUTFD ZIPFILE 变量
 install_module() {
   rm -rf $TMPDIR
   mkdir -p $TMPDIR
@@ -723,16 +723,16 @@ install_module() {
   mount_partitions
   api_level_arch_detect
 
-  # Setup busybox and binaries
+  # 设置 busybox 和二进制文件
   if $BOOTMODE; then
     boot_actions
   else
     recovery_actions
   fi
 
-  # Extract prop file
+  # 解压 module.prop 文件
   unzip -o "$ZIPFILE" module.prop -d $TMPDIR >&2
-  [ ! -f $TMPDIR/module.prop ] && abort "! Unable to extract zip file!"
+  [ ! -f $TMPDIR/module.prop ] && abort "! 无法解压文件!"
 
   local MODDIRNAME=modules
   $BOOTMODE && MODDIRNAME=modules_update
@@ -742,17 +742,17 @@ install_module() {
   MODAUTH=`grep_prop author $TMPDIR/module.prop`
   MODPATH=$MODULEROOT/$MODID
 
-  # Create mod paths
+  # 创建模块目录
   rm -rf $MODPATH
   mkdir -p $MODPATH
 
   if is_legacy_script; then
     unzip -oj "$ZIPFILE" module.prop install.sh uninstall.sh 'common/*' -d $TMPDIR >&2
 
-    # Load install script
+    # 加载安装脚本
     . $TMPDIR/install.sh
 
-    # Callbacks
+    # 启动安装
     print_modname
     on_install
 
@@ -763,19 +763,19 @@ install_module() {
     $POSTFSDATA && cp -af $TMPDIR/post-fs-data.sh $MODPATH/post-fs-data.sh
     $LATESTARTSERVICE && cp -af $TMPDIR/service.sh $MODPATH/service.sh
 
-    ui_print "- Setting permissions"
+    ui_print "- 设置文件权限"
     set_permissions
   else
-    print_title "$MODNAME" "by $MODAUTH"
-    print_title "Powered by Magisk"
+    print_title "$MODNAME" "作者: $MODAUTH"
+    print_title "由 Magisk 提供支持"
 
     unzip -o "$ZIPFILE" customize.sh -d $MODPATH >&2
 
     if ! grep -q '^SKIPUNZIP=1$' $MODPATH/customize.sh 2>/dev/null; then
-      ui_print "- Extracting module files"
+      ui_print "- 解压模块文件"
       unzip -o "$ZIPFILE" -x 'META-INF/*' -d $MODPATH >&2
 
-      # Default permissions
+      # 默认设置权限
       set_perm_recursive $MODPATH 0 0 0755 0644
       set_perm_recursive $MODPATH/system/bin 0 2000 0755 0755
       set_perm_recursive $MODPATH/system/xbin 0 2000 0755 0755
@@ -783,31 +783,31 @@ install_module() {
       set_perm_recursive $MODPATH/system/vendor/bin 0 2000 0755 0755 u:object_r:vendor_file:s0
     fi
 
-    # Load customization script
+    # 加载自定义安装脚本
     [ -f $MODPATH/customize.sh ] && . $MODPATH/customize.sh
   fi
 
-  # Handle replace folders
+  # 处理替换目录
   for TARGET in $REPLACE; do
-    ui_print "- Replace target: $TARGET"
+    ui_print "- 替换目标: $TARGET"
     mktouch $MODPATH$TARGET/.replace
   done
 
   if $BOOTMODE; then
-    # Update info for Magisk app
+    # Magisk app 的更新信息
     mktouch $NVBASE/modules/$MODID/update
     rm -rf $NVBASE/modules/$MODID/remove 2>/dev/null
     rm -rf $NVBASE/modules/$MODID/disable 2>/dev/null
     cp -af $MODPATH/module.prop $NVBASE/modules/$MODID/module.prop
   fi
 
-  # Copy over custom sepolicy rules
+  # 复制自定义 sepolicy rules
   if [ -f $MODPATH/sepolicy.rule ]; then
-    ui_print "- Installing custom sepolicy rules"
+    ui_print "- 安装自定义 sepolicy rules"
     copy_sepolicy_rules
   fi
 
-  # Remove stuff that doesn't belong to modules and clean up any empty directories
+  # 删除不属于模块的内容并清理所有空目录
   rm -rf \
   $MODPATH/system/placeholder $MODPATH/customize.sh \
   $MODPATH/README.md $MODPATH/.git*
@@ -817,14 +817,14 @@ install_module() {
   $BOOTMODE || recovery_cleanup
   rm -rf $TMPDIR
 
-  ui_print "- Done"
+  ui_print "- 完成"
 }
 
 ##########
-# Presets
+# 预设
 ##########
 
-# Detect whether in boot mode
+# 检测是否处于启动模式
 [ -z $BOOTMODE ] && ps | grep zygote | grep -qv grep && BOOTMODE=true
 [ -z $BOOTMODE ] && ps -A 2>/dev/null | grep zygote | grep -qv grep && BOOTMODE=true
 [ -z $BOOTMODE ] && BOOTMODE=false
@@ -833,7 +833,7 @@ ROOTFS=$(dir=$(cat /init_shell.sh | xargs -n 1 | grep "init" | sed "s|/init||");
 NVBASE="$ROOTFS"/data/adb
 TMPDIR="$NVBASE"/tmp
 
-# Bootsigner related stuff
+# Boot 签名相关
 BOOTSIGNERCLASS=com.topjohnwu.signing.SignBoot
 BOOTSIGNER='/system/bin/dalvikvm -Xnoimage-dex2oat -cp $APK $BOOTSIGNERCLASS'
 BOOTSIGNED=false
